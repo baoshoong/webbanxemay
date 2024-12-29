@@ -10,7 +10,6 @@ using webbanxe.Constant;
 using webbanxe.Data;
 using webbanxe.Models;
 using webbanxe.Models.ModelView;
-using webbanxe.Payments;
 using Microsoft.AspNetCore.Http;
 using webbanxe.Models.Authentications;
 
@@ -133,100 +132,7 @@ namespace webbanxe.Controllers
 
         [HttpGet("Orders/Payment-Order/{id:int}")]
         [Authentication]
-        public async Task<IActionResult> Payment_Order(int? id)
-        {
-            if (id == null || _context.Order == null)
-            {
-                return NotFound();
-            }
-
-            var order = await _context.Order
-                .FirstOrDefaultAsync(m => m.IdOrder == id);
-            var result = from o in _context.Order
-                         join c in _context.Carts on o.IdCart equals c.IdCart
-                         join b in _context.Bike on c.IdBike equals b.IdBike
-                         join u in _context.Users on c.IdUser equals u.IdUser
-                         where c.IdUser == Int32.Parse(HttpContext.Session.GetString("idUser")) && o.IdOrder == id
-                         select new
-                         {
-                             Order = o,
-                             Cart = c,
-                             Bike = b,
-                             User = u
-                         };
-
-            var result1 = from o in _context.Order
-                          join c in _context.Carts on o.IdCart equals c.IdCart
-                          join b in _context.Accessaries on c.IdAccessary equals b.IdAccessary
-                          join u in _context.Users on c.IdUser equals u.IdUser
-                          where c.IdUser == Int32.Parse(HttpContext.Session.GetString("idUser")) && o.IdOrder == id
-                          select new
-                          {
-                              Order = o,
-                              Cart = c,
-                              Accessary = b,
-                              User = u
-                          };
-            ViewOrder viewCart = new ViewOrder();
-            if (result != null)
-            {
-                foreach (var i in result)
-                {
-                    viewCart.Cart = i.Cart;
-                    viewCart.User = i.User;
-                    viewCart.Bike = i.Bike;
-                    viewCart.Order = i.Order;
-                }
-            }
-            if (result1 != null)
-            {
-                foreach (var i in result1)
-                {
-                    viewCart.Cart = i.Cart;
-                    viewCart.User = i.User;
-                    viewCart.Accessary = i.Accessary;
-                    viewCart.Order = i.Order;
-                }
-
-            }
-            double amount = 0;
-            if (viewCart.Accessary != null)
-            {
-                amount = (viewCart.Accessary.Price -( viewCart.Accessary.Price * viewCart.Accessary.PricePromotion)) * viewCart.Cart.QuantityPurchased;
-            }
-            if(viewCart.Bike != null)
-            {
-                amount = (viewCart.Bike.price - (viewCart.Bike.price * viewCart.Bike.PricePromotion)) * viewCart.Cart.QuantityPurchased;
-            }
-            VnPay vnpay = new VnPay();
-            string vnpUrl = _configuration["Vnpay:vnp_Url"];
-            string vnpApi = _configuration["Vnpay:vnp_Api"];
-            string vnpTmnCode = _configuration["Vnpay:vnp_TmnCode"];
-            string vnpHashSecret = _configuration["Vnpay:vnp_HashSecret"];
-            string vnpReturnUrl = _configuration["Vnpay:vnp_Returnurl"];
-            vnpay.AddRequestData("vnp_Version", VnPay.VERSION);
-            vnpay.AddRequestData("vnp_Command", "pay");
-            vnpay.AddRequestData("vnp_TmnCode", vnpTmnCode);
-            vnpay.AddRequestData("vnp_Amount", (amount * 100).ToString()); //Số tiền thanh toán. Số tiền không mang các ký tự phân tách thập phân, phần nghìn, ký tự tiền tệ. Để gửi số tiền thanh toán là 100,000 VND (một trăm nghìn VNĐ) thì merchant cần nhân thêm 100 lần (khử phần thập phân), sau đó gửi sang VNPAY là: 10000000
-            vnpay.AddRequestData("vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss"));
-            vnpay.AddRequestData("vnp_CurrCode", "VND");
-            vnpay.AddRequestData("vnp_Locale", "vn");
-            vnpay.AddRequestData("vnp_OrderInfo", "Thanh toan don hang:" + order.IdOrder);
-            vnpay.AddRequestData("vnp_OrderType", "other"); //default value: other
-            vnpay.AddRequestData("vnp_ExpireDate", DateTime.Now.AddMinutes(15).ToString("yyyyMMddHHmmss"));
-            vnpay.AddRequestData("vnp_ReturnUrl", vnpReturnUrl);
-            vnpay.AddRequestData("vnp_IpAddr", "127.0.0.1");
-            vnpay.AddRequestData("vnp_TxnRef", order.IdOrder.ToString() + DateTime.Now.ToString("yyyyMMddHHmmss")); // Mã tham chiếu của giao dịch tại hệ thống của merchant. Mã này là duy nhất dùng để phân biệt các đơn hàng gửi sang VNPAY. Không được trùng lặp trong ngày
-            Console.WriteLine(_configuration["vnp_TmnCode"]);
-            _logger.LogInformation("order {}",order.ToString());
-
-            //Add Params of 2.1.0 Version
-            //Billing
-            string paymentUrl = vnpay.CreateRequestUrl(vnpUrl, vnpHashSecret);
-            _logger.LogInformation("VNPAY URL: {0}", paymentUrl);
-           return Redirect(paymentUrl);
-
-        }
+      
 
 
         // GET: Orders/Details/5
